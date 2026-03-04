@@ -1,7 +1,7 @@
 [package]
 name = "hr_policy_auditor"
 address = "github.com/RobinHrt/mthds-hr-policy-compliance-auditor"
-display_name = "HR Policy Compliance Auditor"
+display_name = "HR Policy Auditor"
 version = "1.0.0"
 description = "Audit HR policy documents against regulatory requirements"
 license = "MIT"
