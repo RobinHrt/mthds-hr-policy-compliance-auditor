@@ -1,4 +1,4 @@
-domain    = "hr_policy_compliance_auditor"
+domain    = "hr_policy_auditor"
 description = "Audit HR policy documents against regulatory requirements, producing a compliance gap analysis with risk classification"
 main_pipe = "policy_compliance_audit"
 
