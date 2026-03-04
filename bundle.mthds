@@ -1,0 +1,102 @@
+domain    = "hr_policy_compliance_auditor"
+description = "Audit HR policy documents against regulatory requirements, producing a compliance gap analysis with risk classification"
+main_pipe = "policy_compliance_audit"
+
+[concept.ComplianceFinding]
+description = "Compliance assessment for a single policy section against applicable regulations"
+
+[concept.ComplianceFinding.structure]
+policy_area         = { choices = ["leave", "compensation", "anti-discrimination", "workplace safety", "remote work", "benefits", "termination", "privacy"], description = "Area of the policy", required = true }
+applicable_regulations = { type = "text", description = "Regulations that apply to this policy area", required = true }
+compliance_status   = { choices = ["compliant", "partially compliant", "non-compliant", "not addressed"], description = "Current compliance status", required = true }
+specific_gaps       = { type = "text", description = "What is missing or deficient, citing the regulation" }
+risk_level          = { choices = ["critical", "high", "medium", "low"], description = "Risk level: critical=litigation, high=regulatory fine, medium=employee complaint, low=best practice gap", required = true }
+remediation_action  = { type = "text", description = "Recommended fix with suggested policy language" }
+effort_to_fix       = { choices = ["quick update", "moderate rewrite", "major overhaul"], description = "Estimated effort to remediate" }
+
+[concept.PolicyComplianceReport]
+description = "Aggregate compliance audit report across all policy documents"
+
+[concept.PolicyComplianceReport.structure]
+overall_compliance_score    = { choices = ["strong", "adequate", "gaps present", "at risk"], description = "Overall compliance posture", required = true }
+critical_high_gaps          = { type = "text", description = "Critical and high-risk gaps requiring immediate action", required = true }
+prioritized_remediation     = { type = "text", description = "Prioritized remediation plan, critical first then by effort", required = true }
+jurisdictional_coverage     = { type = "text", description = "Which states and localities are covered vs. missing" }
+executive_summary           = { type = "text", description = "Executive summary for the CHRO", required = true }
+
+# --- Pipes ---
+
+[pipe.policy_compliance_audit]
+type        = "PipeSequence"
+description = "Audit all policy documents against regulatory requirements"
+inputs      = { policies = "Document[]", regulatory_requirements = "Text" }
+output      = "PolicyComplianceReport"
+steps = [
+    { pipe = "audit_single_policy", batch_over = "policies", batch_as = "policy", result = "compliance_findings" },
+    { pipe = "compile_audit_report", result = "audit_report" },
+]
+
+[pipe.audit_single_policy]
+type        = "PipeSequence"
+description = "Extract and audit a single policy document"
+inputs      = { policy = "Document", regulatory_requirements = "Text" }
+output      = "ComplianceFinding"
+steps = [
+    { pipe = "extract_policy_text", result = "pages" },
+    { pipe = "evaluate_compliance", result = "finding" },
+]
+
+[pipe.extract_policy_text]
+type        = "PipeExtract"
+description = "Extract text from a policy document"
+inputs      = { policy = "Document" }
+output      = "Page[]"
+model       = "@default-text-from-pdf"
+
+[pipe.evaluate_compliance]
+type        = "PipeLLM"
+description = "Evaluate a single policy document against regulatory requirements"
+inputs      = { pages = "Page[]", regulatory_requirements = "Text" }
+output      = "ComplianceFinding"
+model       = "$writing-factual"
+prompt      = """You are an employment law compliance specialist auditing HR policies.
+
+Analyze this policy document against the regulatory requirements. For each policy section:
+
+1. Identify the policy area (leave, compensation, anti-discrimination, workplace safety, remote work, benefits, termination, or privacy).
+2. Match applicable regulations from the reference.
+3. Assess compliance status: compliant, partially compliant, non-compliant, or not addressed.
+4. Document specific gaps, citing the regulation that is not met.
+5. Classify risk: critical (litigation risk), high (regulatory fine), medium (employee complaint), low (best practice gap).
+6. Recommend a remediation action with suggested policy language.
+7. Estimate effort: quick update, moderate rewrite, or major overhaul.
+
+Be precise. Cite specific regulations when identifying gaps.
+
+--- REGULATORY REQUIREMENTS ---
+@regulatory_requirements
+
+--- POLICY DOCUMENT ---
+@pages"""
+
+[pipe.compile_audit_report]
+type        = "PipeLLM"
+description = "Compile all compliance findings into an audit report"
+inputs      = { compliance_findings = "ComplianceFinding[]", regulatory_requirements = "Text" }
+output      = "PolicyComplianceReport"
+model       = "$writing-factual"
+prompt      = """You are the Chief Compliance Officer compiling a policy audit report.
+
+Review all compliance findings and produce a comprehensive audit report:
+
+1. Assess overall compliance: strong, adequate, gaps present, or at risk.
+2. List all critical and high-risk gaps requiring immediate action.
+3. Create a prioritized remediation plan (critical items first, then sorted by effort to fix).
+4. Map jurisdictional coverage: which states and localities are addressed vs. missing.
+5. Write an executive summary for the CHRO with the bottom line and top 3 priorities.
+
+--- REGULATORY REQUIREMENTS ---
+@regulatory_requirements
+
+--- ALL COMPLIANCE FINDINGS ---
+@compliance_findings"""

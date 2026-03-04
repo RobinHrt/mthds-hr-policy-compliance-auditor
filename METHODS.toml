@@ -1,0 +1,12 @@
+[package]
+name = "hr_policy_auditor"
+address = "github.com/RobinHrt/mthds-hr-policy-compliance-auditor"
+display_name = "HR Policy Compliance Auditor"
+version = "1.0.0"
+description = "Audit HR policy documents against regulatory requirements"
+license = "MIT"
+mthds_version = ">=1.0.0"
+main_pipe = "policy_compliance_audit"
+
+[exports.hr_policy_compliance_auditor]
+pipes = ["policy_compliance_audit", "audit_single_policy", "extract_policy_text", "evaluate_compliance", "compile_audit_report"]

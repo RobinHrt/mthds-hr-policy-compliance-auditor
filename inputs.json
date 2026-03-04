@@ -1,0 +1,19 @@
+{
+  "policies": {
+    "concept": "native.Document",
+    "content": [
+      {
+        "url": "/path/to/policy1.pdf"
+      },
+      {
+        "url": "/path/to/policy2.pdf"
+      }
+    ]
+  },
+  "regulatory_requirements": {
+    "concept": "native.Text",
+    "content": {
+      "text": "text_value"
+    }
+  }
+}
